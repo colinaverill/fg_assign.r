@@ -35,7 +35,7 @@ fg_assign <- function(tax_table, url = "http://www.stbates.org/funguild_db.php")
   fg <- jsonlite::fromJSON(gsub("funguild_db", "", fg))
   
   #There are 9 unique levels of taxonomic resolution actually in FUNGuild (though 24 potential levels)
-  #0-keyword, 3-Phylum, 7-Order, 9-Family, 13-genus, 20species, 21-subspecies, 24-Form
+  #0-keyword, 3-Phylum, 7-Order, 9-Family, 13-genus, 20-Species, 21-Subspecies, 24-Form
   #This function requires data on k/c/p/o/f/g/s, so only deals with levels 3,7,9,13,20
   #What follows is a series of if statements to assign function.
   #start with highest level of taxonomy and go down.
