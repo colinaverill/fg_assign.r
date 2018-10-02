@@ -24,7 +24,7 @@ tax_table <- structure(list(kingdom = "Fungi", phylum = "Ascomycota", class = "P
                             row.names = 4L, class = "data.frame")
 
 #Assign functional guilds.
-test <- fg_assign(tax_table)
+fg_assign(tax_table)
 ````
 
 Parallel assignment example:
@@ -39,5 +39,5 @@ k <- structure(list(kingdom = "Fungi", phylum = "Ascomycota", class = "Pezizomyc
 tax_table <- rbind(k,k,k,k,k,k,k,c('Fungi',NA,NA,NA,NA,NA,NA))
 
 #Assign functional guilds.
-test <- fg_assign(tax_table)
+fg_assign_parallel(tax_table)
 ````
