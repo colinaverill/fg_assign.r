@@ -7,6 +7,7 @@
 #'
 #' @param tax_table  #dataframe of taxonomy to assign. kingdom/phylum/class/order/family/genus/species as column names.
 #' @param url        #URL where FUNGuild database lives. currently default to: http://www.stbates.org/funguild_db.php.
+#' @param n.cores    #number of processing cores. If not specified script will automatically detect the number of cores avaialble and use all of them.
 #'
 #' @return           #returns the taxonomy table with FUNGuild assignments appended.
 #' @export
