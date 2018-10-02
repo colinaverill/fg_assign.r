@@ -3,8 +3,7 @@ The R function `fg_assign()` takes a fungal taxonomy table and assigns functiona
 
 This function was developed by Colin Averill, using the FUNGuild database built by Nhu Nguyen and colleagues.
 
-When using this function to assign fungal functional types *_it is important to cite_*
-# Nguyen NH, Song Z, Bates ST, Branco S, Tedersoo L, Menke J, Schilling JS, Kennedy PG. 2016. FUNGuild: An open annotation tool for parsing fungal community datasets by ecological guild. Fungal Ecology, 20: 241-248. doi:10.1016/j.funeco.2015.06.006
+# When using this function to assign fungal functional types it is important to cite: Nguyen NH, Song Z, Bates ST, Branco S, Tedersoo L, Menke J, Schilling JS, Kennedy PG. 2016. FUNGuild: An open annotation tool for parsing fungal community datasets by ecological guild. Fungal Ecology, 20: 241-248. doi:10.1016/j.funeco.2015.06.006
 
 Both functions take a taxonomy table with kingdom/phylum/class/order/family/genus/species as separate columns with those names in lower case.
 
@@ -31,7 +30,7 @@ test <- fg_assign(tax_table)
 Parallel assignment example:
 ````
 #load function
-source("/path/to/fg_assign.r")
+source("/path/to/fg_assign_parallel.r")
 
 #generate a taxonomy table to assign function.
 k <- structure(list(kingdom = "Fungi", phylum = "Ascomycota", class = "Pezizomycetes", order = "Pezizales", family = "Tuberaceae", genus = "Tuber", species = "Tuber melosporum"), 
