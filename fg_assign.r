@@ -1,96 +1,78 @@
-#' fg_assign.r
-#' assigns functional groups to a taxonomy table based on the FUNGuild database.
-#' This function was built by Colin Averill, however the FUNGuild database was developed by Nguyen et al.
-#' PLEASE CITE: Nguyen NH, Song Z, Bates ST, Branco S, Tedersoo L, Menke J, Schilling JS, Kennedy PG. 2016. FUNGuild: An open annotation tool for parsing fungal community datasets by ecological guild. Fungal Ecology, 20: 241-248. doi:10.1016/j.funeco.2015.06.006
-#' depends on R packages rvest, jsonlite.
-#' I load this function at the top of a script using: source("/path/to/fg_assign.r")
-#'
-#' @param tax_table  #dataframe of taxonomy to assign. kingdom/phylum/class/order/family/genus/species as column names.
-#' @param url        #URL where FUNGuild database lives. currently default to: http://www.stbates.org/funguild_db.php.
-#'
-#' @return           #returns the taxonomy table with FUNGuild assignments appended.
-#' @export
-#'
-#' @examples
-#' Testing the function - generate some artificial data to assign guild to.
-#' tax_table <- structure(list(kingdom = "Fungi", phylum = "Ascomycota", class = "Pezizomycetes", order = "Pezizales", family = "Tuberaceae", genus = "Tuber", species = "Tuber melosporum"), 
-#'                             .Names = c("kingdom", "phylum", "class", "order", "family", "genus", "species"), 
-#'                             row.names = 4L, class = "data.frame")
-#' test <- fg_assign(tax_table)
-#' 
-fg_assign <- function(tax_table, url = "http://www.stbates.org/funguild_db.php"){
-  #check for dependencies, run tests.----
+fg_assign <- function(tax){
+  # Check if dependencies are installed
   if (!require('rvest'   ,character.only = TRUE)){
     stop("please install the rvest package.")
   }
   if (!require('jsonlite',character.only = TRUE)){
     stop("please install the jsonlite package.")
   }
-  #check that the input is formatted right. If not, stop, throw an error.
-  if (!is.data.frame(tax_table)){
+  if(!require('tidyverse', character.only = TRUE)){
+    stop('please install the tidyverse package.')
+  }
+  
+  # Check that the input data is a data frame
+  if (!is.data.frame(tax)){
     stop('Your taxonomy table needs to be a data.frame. Try again.')
   }
   
-  #make sure column names are lower case.
-  colnames(tax_table) <- tolower(colnames(tax_table))
-
-  #download FUNGuild database, convert it to something R interpretable.----
-  fg <- url %>% 
+  # Column names to lower case
+  tax <- tax %>% rename_all(tolower)
+  
+  fg <- "http://www.stbates.org/funguild_db.php" %>% 
     xml2::read_html() %>%
     rvest::html_text() 
-  fg <- jsonlite::fromJSON(gsub("funguild_db", "", fg))
+  fg <- jsonlite::fromJSON(gsub("funguild_db_2", "", fg)) %>% 
+    mutate(taxonomicLevel = as.numeric(taxonomicLevel))
   
-  #assign function.----
-  #There are 9 unique levels of taxonomic resolution actually in FUNGuild (though 24 potential levels)
-  #0-keyword, 3-Phylum, 7-Order, 9-Family, 13-genus, 20-Species, 21-Subspecies, 24-Form
-  #This function requires data on k/c/p/o/f/g/s, so only deals with levels 3,7,9,13,20
-  #What follows is a series of if statements to assign function.
-  #start with highest level of taxonomy and go down.
-  #This is written with for loops. Could be faster with lapply.
+  # Define operator
+  `%notin%` <- Negate(`%in%`)
   
-  #add columns to tax table for fg output.
-  out <- data.frame(matrix(,nrow=nrow(tax_table),ncol = 7))
-  colnames(out) <- colnames(fg)[4:10]
-  tax_table <- cbind(tax_table,out)
+  # Match on species level
+  spp_match <- tax %>% 
+    mutate(species = str_c(genus, species, sep = " ")) %>% 
+    left_join(., fg %>% select(taxon, guild), by = c('species' = 'taxon')) %>% 
+    filter(!is.na(guild))
   
-  #phylum level match.
-  for(i in 1:nrow(tax_table)){
-    if(tax_table$phylum[i] %in% fg$taxon){
-      tax_table[i,(ncol(tax_table) - 6):ncol(tax_table)] <- fg[match(tax_table$phylum[i],fg$taxon),4:10]
-    }
-  }
-  #class level match.
-  for(i in 1:nrow(tax_table)){
-    if(tax_table$class[i] %in% fg$taxon){
-      tax_table[i,(ncol(tax_table) - 6):ncol(tax_table)] <- fg[match(tax_table$class[i],fg$taxon),4:10]
-    }
-  }
-  #order level match.
-  for(i in 1:nrow(tax_table)){
-    if(tax_table$order[i] %in% fg$taxon){
-      tax_table[i,(ncol(tax_table) - 6):ncol(tax_table)] <- fg[match(tax_table$order[i],fg$taxon),4:10]
-    }
-  }
-  #family level match.
-  for(i in 1:nrow(tax_table)){
-    if(tax_table$family[i] %in% fg$taxon){
-      tax_table[i,(ncol(tax_table) - 6):ncol(tax_table)] <- fg[match(tax_table$family[i],fg$taxon),4:10]
-    }
-  }
-  #genus level match.
-  for(i in 1:nrow(tax_table)){
-    if(tax_table$genus[i] %in% fg$taxon){
-      tax_table[i,(ncol(tax_table) - 6):ncol(tax_table)] <- fg[match(tax_table$genus[i],fg$taxon),4:10]
-    }
-  }
-  #species level match.
-  for(i in 1:nrow(tax_table)){
-    if(tax_table$species[i] %in% fg$taxon){
-      tax_table[i,(ncol(tax_table) - 6):ncol(tax_table)] <- fg[match(tax_table$species[i],fg$taxon),4:10]
-    }
-  }
+  # Match on genus level
+  genus_match <- tax %>% 
+    filter(otu %notin% spp_match$otu) %>% 
+    left_join(., fg %>% select(taxon, guild), by = c('genus' = 'taxon')) %>% 
+    filter(!is.na(guild))
   
-  #report and return output.----
-  cat(sum(!is.na(tax_table$guild))/(nrow(tax_table))*100,'% of taxa assigned a functional guild.', sep = '')
-  return(tax_table)
+  # Match on family level
+  family_match <- tax %>%
+    filter(otu %notin% spp_match$otu) %>% 
+    filter(otu %notin% genus_match$otu) %>% 
+    left_join(., fg %>% select(taxon, guild), by = c('family' = 'taxon')) %>% 
+    filter(!is.na(guild))
+  
+  # Match on order level
+  order_match <- tax %>% 
+    filter(otu %notin% spp_match$otu) %>% 
+    filter(otu %notin% genus_match$otu) %>% 
+    filter(otu %notin% family_match$otu) %>% 
+    left_join(., fg %>% select(taxon, guild), by = c('order' = 'taxon')) %>% 
+    filter(!is.na(guild))
+  
+  # Match on phylum level
+  phylum_match <- tax %>% 
+    filter(otu %notin% spp_match$otu) %>% 
+    filter(otu %notin% genus_match$otu) %>% 
+    filter(otu %notin% family_match$otu) %>% 
+    filter(otu %notin% order_match$otu) %>% 
+    left_join(., fg %>% select(taxon, guild), by = c('phylum' = 'taxon')) %>% 
+    filter(!is.na(guild))
+  
+  # Combine data, assign mycorrhizal status
+  out <- bind_rows(spp_match, genus_match, family_match, order_match, phylum_match) %>% 
+    mutate(myc_status = case_when( str_detect(guild, 'Arbuscular Mycorrhizal') ~ 'Arbuscular Mycorrhizal', 
+                                   str_detect(guild, 'Ectomycorrhizal') & str_detect(guild, 'Ericoid Mycorrhizal') ~ 'Ectomycorrhizal - Ericoid Mycorrhizal', 
+                                   str_detect(guild, 'Ectomycorrhizal') ~ 'Ectomycorrhizal', 
+                                   str_detect(guild, 'Ericoid Mycorrhizal') ~ 'Ericoid Mycorrhizal', 
+                                   TRUE ~ 'Non Mycorrhizal'))
+  
+  # Print stats
+  cat(sum(!is.na(out$guild))/(nrow(tax))*100,'% of taxa assigned a functional guild.', sep = '')
+  
+  return(out)
 }
